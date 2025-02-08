@@ -12,7 +12,7 @@ import mpmath as mp
 import numpy as np
 import math
 import time
-
+from scipy.interpolate import CubicSpline
 #Implement placewise operations for mpmath matrices
 def ov(op, *args):
     return mp.matrix(list(map(op,*args)))
@@ -105,7 +105,8 @@ def binary_search_bending(L, R, grid, df_ds, tol, theta0,search_param):
 def bend_samples(grid, Isamples, order = 4, E = 1, Fsin = mpmathify(0), Fcos = True, theta0 = 1, tol = 0.001):
     #Useful for shorthand calculation since we dont have total numpy freedom with mpmath library
     onesmatrix = mp.matrix([1] * len(Isamples))
-    
+    I_spline = CubicSpline(grid, Isamples, axis=0, bc_type='clamped', extrapolate=True)
+
     #Is the sine term present?
     Fs = not (Fsin == mpmathify(0))
 
@@ -142,7 +143,7 @@ def bend_samples(grid, Isamples, order = 4, E = 1, Fsin = mpmathify(0), Fcos = T
         return F1 * mp.sin(t) + Fco * mp.cos(t)
 
     def dt_ds(s,M,step):
-        return M/E/Isamples[step]
+        return M/E/I_spline(s)
 
     def df_ds(s, f, step):
         return mp.matrix([dM_ds(f[1],f[2]),dt_ds(s,f[0],step), mpmathify(0)])
