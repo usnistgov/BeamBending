@@ -3,7 +3,9 @@
 
 #TODO:
 #RungeKutta aribtrary precision in compiled language
-
+#Show numerical ansats works with the solutions I make
+#Paper plots, simple example (uniform), save the plot data as txt not just code
+#Illinois method to speed up some edge cases and still guarentee convergence?
 
 import matplotlib.pyplot as plt
 from mpmath import mpmathify
@@ -205,6 +207,7 @@ def binary_search_bending(L, R, grid, df_ds, tol, theta0, search_param):
 
     # If tolerance is met in the shooting parameter or interval size end
     # calculation
+    print(L,R, F[-1][1])
     if mp.fabs(theta0 - F[-1][1]) / theta0 < tol or mp.fabs(L - R) < tol * mp.fabs(
         L + R
     ):
@@ -223,7 +226,122 @@ def binary_search_bending(L, R, grid, df_ds, tol, theta0, search_param):
 
     # catch all/error case
     return (L + R) / mpmathify(2)
+def regula_falsi_method_bending(L, R, grid, df_ds, tol, theta0, search_param):
+    s0 = grid[0]
+    ic = [0, 0, 0]
 
+    # Initial guesses for Regula Falsi method
+    ic[search_param] = L
+    S1, F1, Es1 = mp_RKF45_fixed(
+        mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+    )
+    ic[search_param] = R
+    S2, F2, Es2 = mp_RKF45_fixed(
+        mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+    )
+
+    # First value at R
+    F1_value = F1[-1][1]
+    F2_value = F2[-1][1]
+    #if F1_value < mpmathify(0):
+        #F1_value = mp.fabs(F1_value)
+    #if F2_value < mpmathify(0):
+        #F2_value = mp.fabs(F2_value)
+
+    # Continue iterating using the Regula Falsi method
+    iteration = 0
+    while mp.fabs(F1_value - theta0) / theta0 >= tol and mp.fabs(L - R) >= tol * (
+        L + R
+    ):
+
+        # Check for division by zero
+        if F2_value - F1_value == 0:  # Prevent division by zero
+            return (L + R) / mp.mpf(2)  # Return midpoint if derivative is zero
+
+        # Calculate the new guess using the Regula Falsi formula
+        new_L = R - (F2_value - theta0) * (R - L) / (F2_value - F1_value)
+
+        # Update values based on the new guess
+        ic[search_param] = new_L
+        S_new, F_new, Es_new = mp_RKF45_fixed(
+            mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+        )
+        
+        F_new_value = F_new[-1][1]
+        #if F_new_value < mpmathify(0):
+            #F_new_value = mp.fabs(F_new_value)
+        print(L, R, F_new_value,"regula falsi")
+        
+        # Update variables for the next iteration
+        # The key difference here from secant method is that we check if F_new_value is closer to zero
+        if F_new_value * F1_value < 0:
+            R = new_L
+            F2_value = F_new_value
+        else:
+            L = new_L
+            F1_value = F_new_value
+
+        iteration += 1
+
+    return L
+
+def illinois_method_bending(L, R, grid, df_ds, tol, theta0, search_param):
+    s0 = grid[0]
+    ic = [0, 0, 0]
+
+    # Initial guesses for Illinois method
+    ic[search_param] = L
+    S1, F1, Es1 = mp_RKF45_fixed(
+        mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+    )
+    ic[search_param] = R
+    S2, F2, Es2 = mp_RKF45_fixed(
+        mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+    )
+
+    # First values at L and R
+    F1_value = F1[-1][1]
+    F2_value = F2[-1][1]
+
+    # Continue iterating using the Illinois method
+    iteration = 0
+    while mp.fabs(F1_value - theta0) / theta0 >= tol and mp.fabs(L - R) >= tol * (L + R):
+
+        # Check for division by zero
+        if F2_value - F1_value == 0:  # Prevent division by zero
+            return (L + R) / mp.mpf(2)  # Return midpoint if derivative is zero
+
+        # Illinois method modification: interpolate to find the new guess
+        new_L = R - (F2_value - theta0) * (R - L) / (F2_value - F1_value)
+
+        # Update values based on the new guess
+        ic[search_param] = new_L
+        S_new, F_new, Es_new = mp_RKF45_fixed(
+            mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+        )
+
+        F_new_value = F_new[-1][1]
+        print(L, R, F_new_value, "illinois method")
+
+        # Illinois method logic: adjust bounds to accelerate convergence
+        if F_new_value * F1_value < 0:  # Root lies between new_L and R
+            R = new_L
+            F2_value = F_new_value
+        elif F_new_value * F2_value < 0:  # Root lies between L and new_L
+            L = new_L
+            F1_value = F_new_value
+        else:  # Same sign, move one bound to the middle point
+            if F1_value * F2_value < 0:  # One of the signs is near zero, adjust L or R
+                if abs(F1_value) < abs(F2_value):
+                    R = new_L  # Adjust R if F1_value is closer to zero
+                    F2_value = F_new_value
+                else:
+                    L = new_L  # Adjust L if F2_value is closer to zero
+                    F1_value = F_new_value
+
+        iteration += 1
+
+    return L
 
 def secant_method_bending(L, R, grid, df_ds, tol, theta0, search_param):
     s0 = grid[0]
@@ -242,12 +360,17 @@ def secant_method_bending(L, R, grid, df_ds, tol, theta0, search_param):
     # First value at R
     F1_value = F1[-1][1]
     F2_value = F2[-1][1]
-
+    #if F1_value < mpmathify(0):
+        #F1_value = mp.fabs(F1_value)
+    #if F2_value < mpmathify(0):
+        #F2_value = mp.fabs(F2_value)
+                
     # Continue iterating using the secant method
     iteration = 0
     while mp.fabs(F2_value - theta0) / theta0 >= tol and mp.fabs(L - R) >= tol * (
         L + R
     ):
+
         # Update guess using the secant method formula
         if F2_value - F1_value == 0:  # Prevent division by zero
             return (L + R) / mp.mpf(2)  # Return midpoint if derivative is zero
@@ -258,9 +381,14 @@ def secant_method_bending(L, R, grid, df_ds, tol, theta0, search_param):
         S_new, F_new, Es_new = mp_RKF45_fixed(
             mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
+        
         F_new_value = F_new[-1][1]
-
+        #if F_new_value < mpmathify(0):
+            #F_new_value = mp.fabs(F_new_value)
+        print(L,R, F_new_value)
         # Update variables for the next iteration
+        #if(new_L < mpmathify(0)):
+            #new_L = mpmathify(0)
         L = R
         F1_value = F2_value
         R = new_L
@@ -380,20 +508,21 @@ def bend_samples(
     #############
     ###"Shooting"
     #############
+    shooting = regula_falsi_method_bending#secant_method_bending#regula_falsi_method_bending#secant_method_bending#binary_search_bending#
     # Sine only, which means shootign a small initial bending moment
     if Fs and (not Fcos):
-        f0[0] = secant_method_bending(
-            f0[0] / mpmathify(32), f0[0] * mpmathify(32), grid, df_ds, tol, theta0, 0
-        )  # binary_search_bending(f0[0]/mpmathify(32), f0[0]* mpmathify(32), grid, df_ds, tol, theta0, 0)
+        f0[0] = shooting(
+            mpmathify(0), f0[0] * mpmathify(32), grid, df_ds, tol, theta0, 0
+        ) 
         S, F, Es = mp_RKF45_fixed(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         return S, F, Es
     # Cosine only, shoots the F2 term which is the force coefficient on the cosine force, also for the general case or both terms significant
     if Fcos:  # (not Fs) and
-        f0[2] = secant_method_bending(
-            f0[2] / mpmathify(32), f0[2] * mpmathify(32), grid, df_ds, tol, theta0, 2
-        )  # binary_search_bending(f0[2]/mpmathify(32), f0[2]* mpmathify(32), grid, df_ds, tol, theta0, 2)
+        f0[2] = shooting(
+            mpmathify(0), f0[2] * mpmathify(32), grid, df_ds, tol, theta0, 2
+        )  
         S, F, Es = mp_RKF45_fixed(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
