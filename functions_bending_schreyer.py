@@ -1,11 +1,7 @@
 # functions_bending_schreyer.py library file
 # Benjamin Schreyer benontheplanet@gmail.com
+#  stephan.schlamminger@nist.gov
 
-#TODO:
-#RungeKutta aribtrary precision in compiled language
-#Show numerical ansats works with the solutions I make
-#Paper plots, simple example (uniform), save the plot data as txt not just code
-#Illinois method to speed up some edge cases and still guarentee convergence?
 
 import matplotlib.pyplot as plt
 from mpmath import mpmathify
@@ -29,17 +25,17 @@ def ov(op, *args):
 ##################
 def mp_RKF45_fixed(f0, s0, s_final, dfds, step_tol, ds_max):
     # "time" coordinate, other variables, and their errors
-    ss = [-1] * (int(s_final / ds_max) + 1)
-    fs = [-1] * (int(s_final / ds_max) + 1)
-    es = [-1] * (int(s_final / ds_max) + 1)
+    ss = []
+    fs = []
+    es = []
 
     # Initialize the iterated state
     f = mp.matrix((f0))
     s = s0
 
-    ss[0] = s
-    fs[0] = f
-    es[0] = f - f  # Initial step error is 0
+    ss.append(s)
+    fs.append(f)
+    es.append(f - f)  # Initial step error is 0
 
     # Runge-Kutta45 coefficient table for values and truncation errors
     Ak = mp.matrix(
@@ -135,10 +131,103 @@ def mp_RKF45_fixed(f0, s0, s_final, dfds, step_tol, ds_max):
         ]
     )
 
+    Ak = mp.matrix(
+        [
+            mpmathify(0),
+            mpmathify(1) / mpmathify(4),
+            mpmathify(3) / mpmathify(8),
+            mpmathify(12) / mpmathify(13),
+            mpmathify(1),
+            mpmathify(1) / mpmathify(2),
+        ]
+    )
+    Ck = mp.matrix(
+        [
+            mpmathify(25) / mpmathify(216),
+            mpmathify(0),
+            mpmathify(1408) / mpmathify(2565),
+            mpmathify(2197) / mpmathify(4104),
+            mpmathify(-1) / mpmathify(5),
+            mpmathify(0),
+        ]
+    )
+    CHk = mp.matrix(
+        [
+            mpmathify(16) / mpmathify(135),
+            mpmathify(0),
+            mpmathify(6656) / mpmathify(12825),
+            mpmathify(28561) / mpmathify(56430),
+            mpmathify(-9) / mpmathify(50),
+            mpmathify(2) / mpmathify(55),
+        ]
+    )
+    CTk = mp.matrix(
+        [
+            mpmathify(-1) / mpmathify(360),
+            mpmathify(0),
+            mpmathify(128) / mpmathify(4275),
+            mpmathify(2197) / mpmathify(75240),
+            mpmathify(-1) / mpmathify(50),
+            mpmathify(-2) / mpmathify(55),
+        ]
+    )
+    Bkl = mp.matrix(
+        [
+            [
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+            ],
+            [
+                mpmathify(1) / mpmathify(4),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+            ],
+            [
+                mpmathify(3) / mpmathify(32),
+                mpmathify(9) / mpmathify(32),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+            ],
+            [
+                mpmathify(1932) / mpmathify(2197),
+                mpmathify(-7200) / mpmathify(2197),
+                mpmathify(7296) / mpmathify(2197),
+                mpmathify(0),
+                mpmathify(0),
+                mpmathify(0),
+            ],
+            [
+                mpmathify(439) / mpmathify(216),
+                mpmathify(8) / mpmathify(-1),
+                mpmathify(3680) / mpmathify(513),
+                mpmathify(-845) / mpmathify(4104),
+                mpmathify(0),
+                mpmathify(0),
+            ],
+            [
+                mpmathify(-8) / mpmathify(27),
+                mpmathify(2) / mpmathify(1),
+                mpmathify(-3544) / mpmathify(2565),
+                mpmathify(1859) / mpmathify(4104),
+                mpmathify(-11) / mpmathify(40),
+                mpmathify(0),
+            ],
+        ]
+    )
+
 
     ks = [0, 0, 0, 0, 0, 0]
     # Fixed step iterations of Runge-Kutta saving the error and results
-    for w in range(int(s_final / ds_max)):
+    while s < s_final - ds_max:
         delta = None
 
         args_s = s + ds_max * Ak
@@ -154,7 +243,8 @@ def mp_RKF45_fixed(f0, s0, s_final, dfds, step_tol, ds_max):
             fa = f
             for i in range(0, k):
                 fa = fa + ks[i] * Bkl[k, i]
-
+                #print(Bkl[k,i],end = ", ")
+            #print("\n")
             ks[k] = ds_max * dfds(args_s[k], fa)
 
             if k == 0:
@@ -167,9 +257,9 @@ def mp_RKF45_fixed(f0, s0, s_final, dfds, step_tol, ds_max):
         f = f + delta
         s +=  ds_max
         # Save the error
-        es[w + 1] = truncation_error
-        ss[w + 1] = s
-        fs[w + 1] = f
+        es.append(truncation_error)
+        ss.append(s)
+        fs.append(f)
 
     return ss, fs, es
 
@@ -202,7 +292,10 @@ def bend_samples(
     onesmatrix = mp.matrix([1] * len(Isamples))
 
     #Spline interpolate the samples of the geometry to be compatible with RK intermediate sampling
-    I_spline = CubicSpline(grid, Isamples, axis=0, bc_type="clamped", extrapolate=True)
+    IS = CubicSpline(grid, Isamples, axis=0, bc_type="clamped", extrapolate=True)
+    def I_spline(x):
+        #print(IS(x))
+        return IS(x)
 
     # Is the sine term present?
     Fs = not (Fsin == mpmathify(0))
@@ -267,7 +360,7 @@ def bend_samples(
     f0 = None
     # Anytime the cosine term is not negligible (a side force is present)
     if Fcos:  # and (not Fs):
-        f0 = mp.matrix([0, 0, F2])
+        f0 = mp.matrix([0, 0, mp.fabs(F2)])
     s0 = grid[0]
 
     # Case: sine bending the estimate is not perfect, but should respond linearly so we can just rescale the estimate IC to scale the
@@ -281,19 +374,19 @@ def bend_samples(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         f0 = mp.matrix(
-            [mpmathify("1E-" + str(ase)) * theta0 / F[len(F) - 1][1], mpmathify(0), F2]
+            [mp.fabs(mpmathify("1E-" + str(ase)) * theta0 / F[len(F) - 1][1]), mpmathify(0), mp.fabs(F2)]
         )  # mpmathify()/F[len(F) - 1][1]
         
     #########################################
     # "General case", "Both terms significant"
     #########################################
     if Fs and Fcos:
-        f0 = mp.matrix([mpmathify(0), mpmathify(0), F2])
+        f0 = mp.matrix([mpmathify(0), mpmathify(0), mp.fabs(F2)])
         S, F, Es = mp_RKF45_fixed(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         f0 = mp.matrix(
-            [mpmathify(0), mpmathify(0),F2 * theta0 / F[len(F) - 1][1]]
+            [mpmathify(0), mpmathify(0),mp.fabs(F2 * theta0 / F[len(F) - 1][1])]
         )  
     
     # Large angle we now need to binary search to find the initial condition by shooting
@@ -316,6 +409,7 @@ def bend_samples(
         S, F, Es = mp_RKF45_fixed(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
+        print(f0, Fs, Fcos)
         return S, F, Es
     # Cosine only, shoots the F2 term which is the force coefficient on the cosine force, also for the general case or both terms significant
     if Fcos:  # (not Fs) and
@@ -335,6 +429,7 @@ def bend_samples(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         # Return S (the places along the fiber for which the bending angle is determined), F (list of vectors [M,theta,F2] where theta encodes the geometry of the bending, and Es is the errors
+        print(f0, Fs, Fcos)
         return S, F, Es
 
 
