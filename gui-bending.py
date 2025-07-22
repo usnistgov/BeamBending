@@ -1,3 +1,6 @@
+#GUI FOR BENDING
+#Benjamin Schreyer
+#stephan.schlamminger@nist.gov
 import sys
 import numpy as np
 import mpmath as mp
@@ -128,7 +131,7 @@ class SimulationPlot(FigureCanvas):
             self.ax.add_collection(lc)
             # Add colorbar
             cbar = self.fig.colorbar(lc, ax=self.ax, pad=0.02)
-            cbar.set_label("Relative Energy Density", color='white')
+            cbar.set_label("Relative energy density", color='white')
             cbar.ax.yaxis.set_tick_params(color='white')
             cbar.outline.set_edgecolor('white')
             plt.setp(cbar.ax.yaxis.get_ticklabels(), color='white')
@@ -145,7 +148,7 @@ class SimulationPlot(FigureCanvas):
 class Screen01(QWidget):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Interactive Bending Simulator")
+        self.setWindowTitle("Interactive bending simulator")
         self.setGeometry(100, 100, 1400, 1000)
         self.setStyleSheet("background-color: black; color: white;")
 
