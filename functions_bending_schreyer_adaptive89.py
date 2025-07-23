@@ -254,27 +254,7 @@ def mp_RKF89_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
    
         ]
     )
-    Ck = mp.matrix(
-        [
-            mpmathify(16) / mpmathify(135),
-            mpmathify(0),
-            mpmathify(6656) / mpmathify(12825),
-            mpmathify(28561) / mpmathify(56430),
-            mpmathify(-9) / mpmathify(50),
-            mpmathify(2) / mpmathify(55),
-        ]
-    )
-    #This is just Ck-CHk
-    CTk = mp.matrix(
-        [
-            mpmathify(-1) / mpmathify(360),
-            mpmathify(0),
-            mpmathify(128) / mpmathify(4275),
-            mpmathify(2197) / mpmathify(75240),
-            mpmathify(-1) / mpmathify(50),
-            mpmathify(-2) / mpmathify(55),
-        ]
-    )
+    
     Bkl = mp.matrix(
         [
 [mpmathify(" 0.0"),
