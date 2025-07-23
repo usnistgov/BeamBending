@@ -14,7 +14,7 @@ from functions_bending_schreyer_adaptive89 import bend_samples, integrate_xz
 L = 0.05               # Length (m)
 T = 20e-6              # Thickness (m)
 w0 = 0.5e-3            # Mean half-width (m)
-amp = 0.3e-3           # Amplitude of sinusoid (m)
+amp = 0.3e-3           # Amplitude of half width sinusoid (m)
 E = 200e9              # Young's modulus (Pa)
 mass = 0.3             # Mass (kg)
 gravity = 9.81         # Gravity (m/s^2)
@@ -25,9 +25,10 @@ n_points = 200         # Sampling resolution
 # ---- Geometry spline: constant + sinusoidal half-width ----
 s_profile = np.linspace(0, L, 20)
 w_profile = w0 + amp * np.sin(6 * np.pi * s_profile / L)
+# ---- Make a spline to feed the solver from the samples
 hspline = make_interp_spline(s_profile, w_profile, bc_type="natural")
 
-# ---- Evaluation grid (used for visualization only) ----
+# ---- Evaluation grid (used for visualization only, RKF chooses stepsize) ----
 grid = mp.matrix(np.linspace(0, L, n_points))
 
 # ---- Run bend_samples using adaptive RKF89 ----
@@ -48,10 +49,10 @@ theta = [-1 * float(f[1]) for f in F]
 Ms = np.array([float(f[0]) for f in F])
 ws = np.array([float(hspline(float(s))) for s in S])
 Is = (1 / 12) * (2 * ws) ** 3 * T
-energy_density = Ms**2 / Is
+energy_density = Ms**2 / Is #proportional to the linear energy density
 normalized_energy = energy_density / np.max(energy_density)
 
-# ---- Integrate flexure shape ----
+# ---- Integrate flexure shape, theta,s coordinates to x,z ----
 x, z = integrate_xz(theta, S)
 x = -x
 z = -z
