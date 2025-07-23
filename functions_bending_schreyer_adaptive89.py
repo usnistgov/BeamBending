@@ -752,7 +752,7 @@ def bend_samples(
             )
             return F[-1][1] - theta0
         print(f0[0], "IC, M(0)")
-        f0[0] = mp.findroot(shot_function, (f0[0]/32, f0[0] * mpmathify(32)), solver="anderson", tol=tol, verbose=True, verify=False)
+        f0[0] = mp.findroot(shot_function, (f0[0]/64, f0[0] * mpmathify(64)), solver="anderson", tol=tol, verbose=True, verify=False)
 
         S, F, Es = bend(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
@@ -769,7 +769,7 @@ def bend_samples(
             print(F[-1][1])
             return F[-1][1] - theta0
         print(f0[2], "IC, Fs")
-        f0[2] = mp.findroot(shot_function, (f0[2]/32, f0[2] * mpmathify(32)), solver="anderson", tol=tol, verbose=True, verify=False)
+        f0[2] = mp.findroot(shot_function, (f0[2]/64, f0[2] * mpmathify(64)), solver="anderson", tol=tol, verbose=True, verify=False)
 
         S, F, Es = bend(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
