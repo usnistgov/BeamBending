@@ -194,7 +194,7 @@ def mp_RKF45_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
     return ss, fs, es
 
 
-#A version of the RK45_fixed that uses a variable step size to reach the desired tolerance.
+#A version of the RK89_fixed that uses a variable step size to reach the desired tolerance.
 def mp_RKF89_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
     #I
     ss = []
@@ -209,7 +209,7 @@ def mp_RKF89_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
     fs.append(f)
     es.append(f - f)  # Initial step error is 0
 
-    # Runge-Kutta45 coefficient table for values and truncation errors
+    # Runge-Kutta89 coefficient table for values and truncation errors
     Ak = mp.matrix(
         [
             mpmathify(" 0.0"),
@@ -231,6 +231,7 @@ def mp_RKF89_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
         mpmathify(" 1.0"),
         ]
     )
+    #Error is given by Fehlberg more explicitly, doesnt require all the C coefficients
     CHk = mp.matrix(
         [
             mpmathify("0.32256083500216249913612900960247e-1"),
