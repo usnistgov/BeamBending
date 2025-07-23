@@ -145,6 +145,8 @@ def mp_RKF45_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
 
     ds = ds_max
     while s < s_final:
+        if ds > ds_max:
+            ds = ds_max
         if s_final - s < ds:
             ds = s_final - s
         #print(ds)
@@ -578,6 +580,8 @@ mpmathify(" 0.0"),
 
     ds = ds_max
     while s < s_final - ds_max:
+        if s_final - s < ds:
+            ds = s_final - s
         #print(ds, f)
         if ds > ds_max:
             ds = ds_max
