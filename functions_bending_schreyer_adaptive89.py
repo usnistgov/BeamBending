@@ -2,9 +2,7 @@
 # Benjamin Schreyer benontheplanet@gmail.com
 #  stephan.schlamminger@nist.gov
 
-#####
-"""YOU CAN SWAP OUT THE 89 and 45 RKF integrators they have the same function signature"""
-#####
+
 import matplotlib.pyplot as plt
 from mpmath import mpmathify
 import mpmath as mp
@@ -165,8 +163,7 @@ def mp_RKF45_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
             fa = f
             for i in range(0, k):
                 fa = fa + ks[i] * Bkl[k, i]
-                #print(Bkl[k,i],end = ", ")
-            #print("\n")
+
             ks[k] = ds * dfds(args_s[k], fa)
 
             if k == 0:
@@ -176,9 +173,9 @@ def mp_RKF45_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
                 truncation_error = truncation_error + CTk[k] * ks[k]
                 delta = delta + CHk[k] * ks[k]
         truncation_error[0] = mpmathify(0.0)
-        err = max(ov(mp.fabs, truncation_error))#max(ov(mp.fabs,(ov(fdiv2,truncation_error,ov(mp.fabs,f), delta))))
+        err = max(ov(mp.fabs,(ov(fdiv2,truncation_error,ov(mp.fabs,f), delta))))
         if err   > step_tol and err != mpmathify(0.0):
-            #print("val and tol", max(ov(mp.fabs,(ov(fdiv2,truncation_error,f, delta)))) , "and", step_tol)
+
             ds = 0.9 * ds * (step_tol/err )**(1/5) 
             print("shrink", err, ds/ s_final)
             continue
@@ -618,8 +615,7 @@ mpmathify(" 0.0"),
             fa = f
             for i in range(0, k):
                 fa = fa + ks[i] * Bkl[k, i]
-                #print(Bkl[k,i],end = ", ")
-            #print("\n")
+
             ks[k] = ds * dfds(args_s[k], fa)
             if k in [0,14,15,16]:
                 if k == 0:
@@ -631,14 +627,11 @@ mpmathify(" 0.0"),
 
             if k == 0:
                 delta = CHk[0] * ks[0]
-                #truncation_error = CTk[0] * ks[0]
             else:
-                #truncation_error = truncation_error + CTk[k] * ks[k]
                 delta = delta + CHk[k] * ks[k]
-        #truncation_error[0] = mpmathify(0.0)
+
         err = max(ov(mp.fabs,(ov(fdiv2,truncation_error,ov(mp.fabs,f), delta))))
         if err   > step_tol and err != mpmathify(0.0):
-            #print("val and tol", max(ov(mp.fabs,(ov(fdiv2,truncation_error,f, delta)))) , "and", step_tol)
             ds = 0.9 * ds * (step_tol/err )**(1/9) 
             print("shrink", err, ds/ s_final)
             continue
@@ -679,8 +672,11 @@ def integrate_xz(t, s):
 # Bending calculation for a zero moment zero theta initial flexure with "shape" Isamples
 # grid: locations along the fiber the moment is sampled, Isamples: samples of the moment for bending along the fiber (same length as grid), order: not used, E: modulus of the material, Fsin: force coefficent for the sin term in bending, Fcos: boolean determining if a side force is present, theta0: intended bending angle, tol: tolerance for shooting
 def bend_samples(
-    grid, hspline, order=4, E=1, Fsin=mpmathify(0), Fcos=False, M0 = None, theta0=1, tol=0.001, T = 1
+    grid, hspline, order=4, E=1, Fsin=mpmathify(0), Fcos=False, M0 = None, theta0=1, tol=0.001, T = 1, use89 = False
 ):
+    bend = mp_RKF45_adaptive
+    if use89:
+        bend = mp_RKF89_adaptive
     min_exponent = -12000
     # Useful for shorthand calculation since we dont have total numpy freedom with mpmath library
     onesmatrix = mp.matrix([1] * len(grid))
@@ -690,7 +686,7 @@ def bend_samples(
     def I_spline(x):
         #print(IS(x))
         return (IS(x)*2)**3 * T /12
-    #print(I_spline(np.linspace(0, float(grid[-1]))))
+
     # Is the sine term present?
     Fs = not (Fsin == mpmathify(0))
     # Is the bending angle small enough to use linear approximation?
@@ -707,12 +703,11 @@ def bend_samples(
 
 
     def dt_ds(s, M):
-        #print("i spline", I_spline(s),s, type(s), type(M), type(I_spline(s)))
-        #print("I_spline(s)", s, I_spline(s))
+
         return M / E / I_spline(s)
 
     def df_ds(s, f):
-        #print (mp.matrix([dM_ds(f[1], f[2]), dt_ds(s, f[0]), mpmathify(0)]), "dfds sourcing NANS")
+
         return mp.matrix([dM_ds(f[1], f[2]), dt_ds(s, f[0]), mpmathify(0)])
 
     f0 = None
@@ -723,7 +718,7 @@ def bend_samples(
     #Set the initial moment, or sideforce to a very small number, then the system is approximately linear and we can directly scale the initial condition to reach the desired bending angle.
     if not Fcos:
         f0 = mp.matrix([mpmathify("1E" +  str(min_exponent)), mpmathify(0), mpmathify(0)])
-        S, F, Es = mp_RKF89_adaptive(
+        S, F, Es = bend(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         f0 = mp.matrix(
@@ -733,7 +728,7 @@ def bend_samples(
             f0[0] = f0[0] /theta0 * 0.1
     else:
         f0 = mp.matrix([mpmathify(0), mpmathify(0),mpmathify("1E" + str(min_exponent))])
-        S, F, Es = mp_RKF89_adaptive(
+        S, F, Es = bend(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         f0 = mp.matrix(
@@ -752,14 +747,14 @@ def bend_samples(
         def shot_function(x):
             ic = [0,0,0]
             ic[0] = x
-            S, F, Es = mp_RKF89_adaptive(
+            S, F, Es = bend(
             mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
             )
             return F[-1][1] - theta0
         print(f0[0], "IC, M(0)")
         f0[0] = mp.findroot(shot_function, (f0[0]/32, f0[0] * mpmathify(32)), solver="anderson", tol=tol, verbose=True, verify=False)
 
-        S, F, Es = mp_RKF89_adaptive(
+        S, F, Es = bend(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         print(f0, Fs, Fcos)
@@ -768,7 +763,7 @@ def bend_samples(
         def shot_function(x):
             ic = [0,0,0]
             ic[2] = x
-            S, F, Es = mp_RKF89_adaptive(
+            S, F, Es = bend(
             mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
             )
             print(F[-1][1])
@@ -776,7 +771,7 @@ def bend_samples(
         print(f0[2], "IC, Fs")
         f0[2] = mp.findroot(shot_function, (f0[2]/32, f0[2] * mpmathify(32)), solver="anderson", tol=tol, verbose=True, verify=False)
 
-        S, F, Es = mp_RKF89_adaptive(
+        S, F, Es = bend(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         print(f0, Fs, Fcos, "IC!")

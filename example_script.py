@@ -1,4 +1,6 @@
 #Generated example script to calculate bending
+#Benjamin Schreyer
+#stephan.schlamminger@nist.gov
 import numpy as np
 import mpmath as mp
 import matplotlib.pyplot as plt

@@ -93,6 +93,7 @@ class SimulationPlot(FigureCanvas):
         self.ax = self.fig.add_subplot(111)
         self.set_dark_style()
         self.last_geometry = None  # Store previous geometry
+        self.cbar = None
 
     def set_dark_style(self):
         self.ax.set_facecolor("black")
@@ -130,11 +131,12 @@ class SimulationPlot(FigureCanvas):
             lc.set_linewidth(2)
             self.ax.add_collection(lc)
             # Add colorbar
-            cbar = self.fig.colorbar(lc, ax=self.ax, pad=0.02)
-            cbar.set_label("Relative energy density", color='white')
-            cbar.ax.yaxis.set_tick_params(color='white')
-            cbar.outline.set_edgecolor('white')
-            plt.setp(cbar.ax.yaxis.get_ticklabels(), color='white')
+            if self.cbar is None:
+                self.cbar = self.fig.colorbar(lc, ax=self.ax, pad=0.02)
+                self.cbar.set_label("Relative energy density", color='white')
+                self.cbar.ax.yaxis.set_tick_params(color='white')
+                self.cbar.outline.set_edgecolor('white')
+                plt.setp(self.cbar.ax.yaxis.get_ticklabels(), color='white')
         else:
             self.ax.plot(z, x, '-', color='magenta', label="Current", zorder=0)
 
@@ -177,6 +179,10 @@ class Screen01(QWidget):
         self.fcos_checkbox = QCheckBox("Include Fcos (cos(θ))")
         self.fcos_checkbox.setChecked(True)  # default value to match current behavior
         form_layout.addRow("Sideforce (rather than initial moment):", self.fcos_checkbox)
+
+        self.rkf89_checkbox = QCheckBox("Use higher order solver")
+        self.rkf89_checkbox.setChecked(True)  # default value to match current behavior
+        form_layout.addRow("RKF89?", self.rkf89_checkbox)
 
 
         form_group.setLayout(form_layout)
@@ -245,7 +251,8 @@ class Screen01(QWidget):
             Fcos=self.fcos_checkbox.isChecked(),
             theta0=bend_angle,
             tol=mp.mpf(tol),
-            T = T
+            T = T,
+            use89 = self.rkf89_checkbox.isChecked()
         )
         theta = [-1*float(f[1]) for f in F]
 
