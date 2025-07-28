@@ -1,0 +1,95 @@
+/* calc.mac */
+/* cannonical coordinate y and flexure end point y' are not the y*/
+/*Lets find the shape parameters of flexure in terms of cannonical coordinates*/
+F: W^2/((L)*a-2)*(a/W*(y - t * Lp/2)-t/W);
+T: W^2/((L)*a - 2)*(-(y - t * Lp/2)/W+(L/W-1/a/W)*t);
+
+/*Shape curve of flexure*/
+Y: F/a/W*(tanh(a*L)*(cosh(a*x)-1)+a*x-sinh(a*x))+T/W/cosh(a*L)*(cosh(a*x) - 1);
+dydx: diff(Y,x);
+d2ydx2:diff(dydx,x);
+/*Calculate energies of the elastic flexure in terms of cannonical coordinates*/
+Vg: 1/2*t**2*Lp/2*W + 1/2*W*ratsimp(integrate((dydx)^2,x,0,L));
+positive;
+Vel: 1/2 * E * I * ratsimp(integrate((d2ydx2)^2,x,0,L));
+positive;
+V: ratsimp(exponentialize(Vel + Vg));
+
+/* find RHS lagrangian*/
+dVdt: diff(V, t);
+dVdy: diff(V, y);
+
+
+/* Simplify them */
+dVdt_simp: combine(ratsimp(expand(dVdt)));
+dVdy_simp: combine(ratsimp(expand(dVdy)));
+
+/* Define numeric values */
+m: 0.03728e-3; /* kg */
+Lp: 0.005;     /* m */
+W: 0.00037;    /* N */
+Icm: 7.82e-11; /* kg·m² */
+E: 280e9;      /* Pa */
+I: 1.2e-23;    /* m⁴ */
+L: bfloat(0.025);      /* m */
+/* We use Iend because theta moves the COM y which gives extra KE with thetadot which is exactly as shifting*/
+Iend: (Lp/2)^2 * m + Icm;
+/* Define a = alpha = sqrt(W/(E*I)) */
+a: bfloat(sqrt(W/(E*I)));
+
+/* Evaluate the simplified expressions with all numerical values */
+dVdy_eval: bfloat(ev(ev(dVdy_simp,a = a), L = L));
+
+dVdt_eval: bfloat(ev(ev(dVdt_simp,a = a), L = L));
+
+
+/* Print float weightings of t and y */
+display(dVdy_eval, dVdt_eval);
+
+dVdt_t: bfloat(ev(dVdt_simp, [t=1, y=0, a=a, L=L]));
+dVdt_y: bfloat(ev(dVdt_simp, [t=0, y=1, a=a, L=L]));
+
+dVdy_t: bfloat(ev(dVdy_simp, [t=1, y=0, a=a, L=L]));
+dVdy_y: bfloat(ev(dVdy_simp, [t=0, y=1, a=a, L=L]));
+
+Force_Matrix: matrix(
+    [dVdy_y, dVdy_t],
+    [dVdt_y, dVdt_t]
+
+);
+
+M: matrix(
+  [m,0],
+  [0, Iend      ]
+);
+
+/* Invert M */
+M_inv: invert(M);
+
+Kmat: -1 * M_inv . Force_Matrix;
+
+/* Compute eigenvalues */
+K_eigenvals: eigenvalues(Kmat);
+
+/* Extract the list of eigenvalues */
+lambda_list: K_eigenvals[1]; /* eigenvalues() returns [ [e1,e2], [v1,v2] ] */
+
+/* Convert eigenvalues to frequencies in Hz */
+frequencies_hz: map(lambda([λ], bfloat(sqrt(-λ) / (2 * %pi))), lambda_list);
+
+/* Print frequencies in Hz */
+display(frequencies_hz);
+
+/* Compute eigenvectors too */
+K_eigs: eigenvectors(Kmat);
+
+/* Extract eigenvectors — they are in K_eigs[2] as columns */
+v1: K_eigs[2][1][1];
+v2: K_eigs[2][2][1];
+
+/* Canonical coordinate form: [t; θ], so r_eff = t/θ for each mode */
+reff_plus: bfloat(v1[1] / v1[2]);
+reff_minus:  bfloat(v2[1] / v2[2]);
+
+/* Display the effective lever arms in meters */
+display(reff_minus, reff_plus);
