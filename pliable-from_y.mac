@@ -87,7 +87,7 @@ K_eigs: eigenvectors(Kmat);
 v1: K_eigs[2][1][1];
 v2: K_eigs[2][2][1];
 
-/* Canonical coordinate form: [t; θ], so r_eff = t/θ for each mode */
+
 reff_plus: bfloat(v1[1] / v1[2]);
 reff_minus:  bfloat(v2[1] / v2[2]);
 
