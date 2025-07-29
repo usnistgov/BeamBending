@@ -1,4 +1,4 @@
-/* calc.mac */
+/* stiff flexure frequencies */
 /* cannonical coordinate y and flexure end point y' are not the y*/
 /*Lets find the shape parameters of flexure in terms of cannonical coordinates*/
 F: W^2/((L)*a-2)*(a/W*(y - t * Lp/2)-t/W);
