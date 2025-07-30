@@ -674,7 +674,7 @@ def bend_theta_with_m0(grid, hspline, thickness = 1, E=1, Fweight = mpmathify(1)
         return (IS(x)*2)**3 * thickness /12
     
     F1 = Fweight
-    F2 = mpmathify(Side)
+    F2 = mpmathify(Fside)
     def dM_ds(t, Fco):
         return F1 * mp.sin(t) + Fco * mp.cos(t)
 
@@ -720,7 +720,7 @@ def bend_theta_with_m0(grid, hspline, thickness = 1, E=1, Fweight = mpmathify(1)
     print(f0, "IC!")
     return S, F, Es
 
-def bend_samples_with_Fside(
+def bend_theta_with_Fside(
     grid, hspline, order=4, E=1, thickness=1, Fweight=mpmathify(1), M0=mpmathify(0), theta0=1, tol=0.001, use89=False
 ):
     bend = mp_RKF45_adaptive
@@ -767,7 +767,7 @@ def bend_samples_with_Fside(
     if theta0 > 0.1:
         f0[2] = f0[2] /theta0 * 0.1
     def shot_function(x):
-        ic = [0,0,0]
+        ic = [M0,0,0]
         ic[2] = x
         S, F, Es = bend(
         mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]

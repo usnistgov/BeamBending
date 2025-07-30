@@ -8,7 +8,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 from scipy.interpolate import make_interp_spline
 
-from functions_bending_schreyer_adaptive89 import bend_samples_with_Fside, integrate_xz
+from functions_bending_schreyer_adaptive89 import bend_theta_with_Fside, bend_theta_with_m0, integrate_xz
 
 # ---- Parameters ----
 L = 0.05               # Length (m)
@@ -33,12 +33,12 @@ grid = mp.matrix(np.linspace(0, L, n_points))
 
 # ---- Run bend_samples using adaptive RKF89 ----
 Fw = mass * gravity
-S, F, Es = bend_samples_with_Fside(
+S, F, Es = bend_theta_with_m0(
     grid=grid,
     hspline=hspline,
     E=E,
     Fweight=mp.mpf(Fw),
-    M0 = 0,                # Use sideforce shooting mode
+    Fside = 0,                # Use sideforce shooting mode
     theta0=theta0,
     tol=mp.mpf(tol),
     thickness= mp.mpf(T)
