@@ -8,7 +8,7 @@ from matplotlib.collections import LineCollection
 from matplotlib.colors import Normalize
 from scipy.interpolate import make_interp_spline
 
-from functions_bending_schreyer_adaptive89 import bend_samples, integrate_xz
+from functions_bending_schreyer_adaptive89 import bend_samples_with_Fside, integrate_xz
 
 # ---- Parameters ----
 L = 0.05               # Length (m)
@@ -23,7 +23,7 @@ tol = 1e-5             # Adaptive RK tolerance
 n_points = 200         # Sampling resolution
 
 # ---- Geometry spline: constant + sinusoidal half-width ----
-s_profile = np.linspace(0, L, 20)
+s_profile = np.linspace(0, L, 200)
 w_profile = w0 + amp * np.sin(6 * np.pi * s_profile / L)
 # ---- Make a spline to feed the solver from the samples
 hspline = make_interp_spline(s_profile, w_profile, bc_type="natural")
@@ -33,15 +33,15 @@ grid = mp.matrix(np.linspace(0, L, n_points))
 
 # ---- Run bend_samples using adaptive RKF89 ----
 Fw = mass * gravity
-S, F, Es = bend_samples(
+S, F, Es = bend_samples_with_Fside(
     grid=grid,
     hspline=hspline,
     E=E,
-    Fsin=mp.mpf(Fw),
-    Fcos=True,                # Use sideforce shooting mode
+    Fweight=mp.mpf(Fw),
+    M0 = 0,                # Use sideforce shooting mode
     theta0=theta0,
     tol=mp.mpf(tol),
-    T=T
+    thickness= mp.mpf(T)
 )
 
 # ---- Extract results ----

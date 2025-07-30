@@ -656,6 +656,134 @@ def integrate_xz(t, s):
 # Return S (the places along the fiber for which the bending angle is determined), F (list of vectors [M,theta,F2] where theta encodes the geometry of the bending, and Es is the errors
 # Bending calculation for a zero moment zero theta initial flexure with "shape" Isamples
 # grid: locations along the fiber the moment is sampled, Isamples: samples of the moment for bending along the fiber (same length as grid), order: not used, E: modulus of the material, Fsin: force coefficent for the sin term in bending, Fcos: boolean determining if a side force is present, theta0: intended bending angle, tol: tolerance for shooting
+
+
+#Two refactored bending functions, one sets the side force, the oter sets the initial moment.
+def bend_theta_with_m0(grid, hspline, thickness = 1, E=1, Fweight = mpmathify(1), Fside=mpmathify(0), theta0=1, tol=0.001,  use89 = False):
+    bend = mp_RKF45_adaptive
+    if use89:
+        bend = mp_RKF89_adaptive
+    min_exponent = -12000
+
+    onesmatrix = mp.matrix([1] * len(grid))
+
+    #Use the spline of the geometry to be compatible with RK intermediate sampling. Assume a rectangular cross section although other cross sections are also trivial.
+    IS = hspline
+    def I_spline(x):
+        #print(IS(x))
+        return (IS(x)*2)**3 * thickness /12
+    
+    F1 = Fweight
+    F2 = mpmathify(Side)
+    def dM_ds(t, Fco):
+        return F1 * mp.sin(t) + Fco * mp.cos(t)
+
+
+    def dt_ds(s, M):
+
+        return M / E / I_spline(s)
+
+    def df_ds(s, f):
+
+        return mp.matrix([dM_ds(f[1], f[2]), dt_ds(s, f[0]), mpmathify(0)])
+
+    f0 = None
+    # Anytime the cosine term is not negligible (a side force is present)
+
+    s0 = grid[0]
+
+    #Set the initial moment, or sideforce to a very small number, then the system is approximately linear and we can directly scale the initial condition to reach the desired bending angle.
+    f0 = mp.matrix([mpmathify("1E" +  str(min_exponent)), mpmathify(0), Fside])
+    S, F, Es = bend(
+        f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+    )
+    f0 = mp.matrix(
+        [mpmathify("1E" + str(min_exponent)) * theta0 / F[len(F) - 1][1], mpmathify(0), Fside]
+    )  # mpmathify()/F[len(F) - 1][1]
+    if theta0 > 0.1:
+        f0[0] = f0[0] /theta0 * 0.1
+
+    #Define a function compatible with the default root finding. Use anderson as its fast and has convergence guarentee of regula falsi method
+    def shot_function(x):
+        ic = [0,0,Fside]
+        ic[0] = x
+        S, F, Es = bend(
+        mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+        )
+        return F[-1][1] - theta0
+    print(f0[0], "IC, M(0)")
+    f0[0] = mp.findroot(shot_function, (f0[0]/64, f0[0] * mpmathify(64)), solver="anderson", tol=tol, verbose=True, verify=False)
+
+    S, F, Es = bend(
+        f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+    )
+    print(f0, "IC!")
+    return S, F, Es
+
+def bend_samples_with_Fside(
+    grid, hspline, order=4, E=1, thickness=1, Fweight=mpmathify(1), M0=mpmathify(0), theta0=1, tol=0.001, use89=False
+):
+    bend = mp_RKF45_adaptive
+    if use89:
+        bend = mp_RKF89_adaptive
+    min_exponent = -12000
+    # Useful for shorthand calculation since we dont have total numpy freedom with mpmath library
+    onesmatrix = mp.matrix([1] * len(grid))
+
+    #Use the spline of the geometry to be compatible with RK intermediate sampling. Assume a rectangular cross section although other cross sections are also trivial.
+    IS = hspline
+    def I_spline(x):
+        #print(IS(x))
+        return (IS(x)*2)**3 * thickness /12
+    F1 = Fweight
+    M0 = mpmathify(M0)
+
+
+
+    def dM_ds(t, Fco):
+        return F1 * mp.sin(t) + Fco * mp.cos(t)
+
+
+    def dt_ds(s, M):
+
+        return M / E / I_spline(s)
+
+    def df_ds(s, f):
+
+        return mp.matrix([dM_ds(f[1], f[2]), dt_ds(s, f[0]), mpmathify(0)])
+
+    f0 = None
+    # Anytime the cosine term is not negligible (a side force is present)
+
+    s0 = grid[0]
+
+    f0 = mp.matrix([M0, mpmathify(0),mpmathify("1E" + str(min_exponent))])
+    S, F, Es = bend(
+        f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+    )
+    f0 = mp.matrix(
+        [M0, mpmathify(0), mpmathify("1E" + str(min_exponent)) * theta0 / F[len(F) - 1][1]]
+    )  # mpmathify()/F[len(F) - 1][1]
+    if theta0 > 0.1:
+        f0[2] = f0[2] /theta0 * 0.1
+    def shot_function(x):
+        ic = [0,0,0]
+        ic[2] = x
+        S, F, Es = bend(
+        mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+        )
+        print(F[-1][1])
+        return F[-1][1] - theta0
+    print(f0[2], "IC, Fs")
+    f0[2] = mp.findroot(shot_function, (f0[2]/64, f0[2] * mpmathify(64)), solver="anderson", tol=tol, verbose=True, verify=False)
+
+    S, F, Es = bend(
+        f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
+    )
+    print(f0, "IC!")
+    return S, F, Es
+
+# Bending calculation generalized for a moment M0 or a side force Fcos
 def bend_samples(
     grid, hspline, order=4, E=1, Fsin=mpmathify(0), Fcos=False, M0 = None, theta0=1, tol=0.001, T = 1, use89 = False
 ):
