@@ -285,6 +285,9 @@ def bend_theta_with_m0(grid, hspline, thickness = 1, E=1, Fweight = mpmathify(1)
     print(f0, "IC!")
     return S, F, Es
 
+bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, theta0=1, tol=0.001, use89=False):
+    #Estimate m0,Fs to acheive both y and heta0 on their own. This can help find bounds for the 2d optimization problem.
+    
 def bend_theta_with_Fside(
     grid, hspline, order=4, E=1, thickness=1, Fweight=mpmathify(1), M0=mpmathify(0), theta0=1, tol=0.001, use89=False
 ):
@@ -322,12 +325,12 @@ def bend_theta_with_Fside(
 
     s0 = grid[0]
 
-    f0 = mp.matrix([M0, mpmathify(0),mpmathify("1E" + str(min_exponent))])
+    f0 = mp.matrix([M0, mpmathify(0),mpmathify("1E" + str(min_exponent)),0])
     S, F, Es = bend(
         f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
     )
     f0 = mp.matrix(
-        [M0, mpmathify(0), mpmathify("1E" + str(min_exponent)) * theta0 / F[len(F) - 1][1]]
+        [M0, mpmathify(0), mpmathify("1E" + str(min_exponent)) * theta0 / F[len(F) - 1][1],0]
     )  # mpmathify()/F[len(F) - 1][1]
     if theta0 > 0.1:
         f0[2] = f0[2] /theta0 * 0.1
@@ -383,10 +386,13 @@ def bend_samples(
     def dt_ds(s, M):
 
         return M / E / I_spline(s)
+    
+    def dy_ds( theta):
+        return mp.sin(theta)
 
     def df_ds(s, f):
 
-        return mp.matrix([dM_ds(f[1], f[2]), dt_ds(s, f[0]), mpmathify(0)])
+        return mp.matrix([dM_ds(f[1], f[2]), dt_ds(s, f[0]), mpmathify(0), dy_ds(f[1])])
 
     f0 = None
     # Anytime the cosine term is not negligible (a side force is present)
@@ -395,22 +401,22 @@ def bend_samples(
 
     #Set the initial moment, or sideforce to a very small number, then the system is approximately linear and we can directly scale the initial condition to reach the desired bending angle.
     if not Fcos:
-        f0 = mp.matrix([mpmathify("1E" +  str(min_exponent)), mpmathify(0), mpmathify(0)])
+        f0 = mp.matrix([mpmathify("1E" +  str(min_exponent)), mpmathify(0), mpmathify(0), mpmathify(0)])
         S, F, Es = bend(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         f0 = mp.matrix(
-            [mpmathify("1E" + str(min_exponent)) * theta0 / F[len(F) - 1][1], mpmathify(0), mpmathify(0)]
+            [mpmathify("1E" + str(min_exponent)) * theta0 / F[len(F) - 1][1], mpmathify(0), mpmathify(0), mpmathify(0  )]
         )  # mpmathify()/F[len(F) - 1][1]
         if theta0 > 0.1:
             f0[0] = f0[0] /theta0 * 0.1
     else:
-        f0 = mp.matrix([mpmathify(0), mpmathify(0),mpmathify("1E" + str(min_exponent))])
+        f0 = mp.matrix([mpmathify(0), mpmathify(0),mpmathify("1E" + str(min_exponent)), mpmathify(0)])
         S, F, Es = bend(
             f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
         )
         f0 = mp.matrix(
-            [mpmathify(0), mpmathify(0), mpmathify("1E" + str(min_exponent)) * theta0 / F[len(F) - 1][1]]
+            [mpmathify(0), mpmathify(0), mpmathify("1E" + str(min_exponent)) * theta0 / F[len(F) - 1][1], mpmathify(0)]
         )  # mpmathify()/F[len(F) - 1][1]
         if theta0 > 0.1:
             f0[2] = f0[2] /theta0 * 0.1
@@ -423,7 +429,7 @@ def bend_samples(
     if not Fcos:
         #Define a function compatible with the default root finding. Use anderson as its fast and has convergence guarentee of regula falsi method
         def shot_function(x):
-            ic = [0,0,0]
+            ic = [0,0,0,0]
             ic[0] = x
             S, F, Es = bend(
             mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
@@ -439,7 +445,7 @@ def bend_samples(
         return S, F, Es
     else:
         def shot_function(x):
-            ic = [0,0,0]
+            ic = [0,0,0,0]
             ic[2] = x
             S, F, Es = bend(
             mp.matrix(ic), s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
