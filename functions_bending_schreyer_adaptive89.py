@@ -386,7 +386,10 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
     Fss_arr = np.array(Fss, dtype=float)
     M0s_arr = np.array(M0s, dtype=float)
     Es_arr  = np.array(Es, dtype=float)
-
+    """ERROR TODO
+      File "C:\Users\Ben\Documents\PleaseGitHub\BeamBending\functions_bending_schreyer_adaptive89.py", line 388, in bend_theta_y
+    Es_arr  = np.array(Es, dtype=float)
+ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (1773,) + inhomogeneous part."""
     fig = plt.figure(figsize=(8,6))
     ax = fig.add_subplot(111, projection='3d')
 
