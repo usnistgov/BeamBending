@@ -367,12 +367,12 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
     # Newton shooting
     Fs_guess, M0_guess = res[0], res[1]
     Fss =[]
-    M0s =[]
-    Es = []
+    M0ss =[]
+    Ess = []
 
     for i in range(10):
         for j in range(10):
-            Fs_sol, M0_sol = Fs_guess + (i-5) * Fs_guess / 10, M0_guess + (j-5) * M0_guess / 10
+            Fs_sol, M0_sol = Fs_guess + (i-5) * Fs_guess / 1, M0_guess + (j-5) * M0_guess / 1
             f0 = mp.matrix([M0_sol, mpmathify(0), Fs_sol, mpmathify(0)])
             S, F, Es = bend(f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0])
             theta_end = F[-1][1]
@@ -380,21 +380,23 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
             res = ((y_end - y0)/grid[len(grid) - 1])**2 + (theta_end - theta0)**2
             
             Fss.append(Fs_sol)
-            M0s.append(M0_sol)
-            Es.append(res)
+            M0ss.append(M0_sol)
+            Ess.append(res)
+            print(res, type(res))
+    print(Es)
     # Convert to numpy arrays
-    Fss_arr = np.array(Fss, dtype=float)
-    M0s_arr = np.array(M0s, dtype=float)
-    Es_arr  = np.array(Es, dtype=float)
-    """ERROR TODO
-      File "C:\Users\Ben\Documents\PleaseGitHub\BeamBending\functions_bending_schreyer_adaptive89.py", line 388, in bend_theta_y
-    Es_arr  = np.array(Es, dtype=float)
-ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (1773,) + inhomogeneous part."""
+    Fss_arr = np.array([float(x/ Fss[0]) for x in Fss], dtype=float)
+    M0s_arr = np.array([float(x/ M0ss[0]) for x in M0ss], dtype=float)
+    Es_arr  = np.array([float(x) for x in Ess], dtype=float)
+#"""ERROR TODO
+#      File "C:\Users\Ben\Documents\PleaseGitHub\BeamBending\functions_bending_schreyer_adaptive89.py", line 388, in bend_theta_y
+#    Es_arr  = np.array(Es, dtype=float)
+#ValueError: setting an array element with a sequence. The requested array has an inhomogeneous shape after 1 dimensions. The detected shape was (1773,) + inhomogeneous part."""
     fig = plt.figure(figsize=(8,6))
     ax = fig.add_subplot(111, projection='3d')
 
     # Option 1: scatter plot of raw data
-    sc = ax.scatter(Fss_arr, M0s_arr, Es_arr, c=Es_arr, cmap='viridis', s=50)
+    sc = ax.scatter(np.array(Fss_arr), np.array(M0s_arr), np.array(Es_arr), c=Es_arr, cmap='viridis', s=50)
     fig.colorbar(sc, ax=ax, label='Residual E')
 
     # Option 2: surface plot (requires gridded data)
