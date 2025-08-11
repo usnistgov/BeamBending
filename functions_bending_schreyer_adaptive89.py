@@ -611,9 +611,9 @@ print("Main!")
 L = 0.1
 wh = 0.001
 def hsc(s):
-    return 0.01 # + (s - L/2)**2 * 4
+    return 1.01 # + (s - L/2)**2 * 4
 
 def h(s):
     return wh * hsc(s)
 s_eval = mp.matrix(np.linspace(0,L,int(200),endpoint = True))
-bend_theta_y(s_eval, h, thickness=mpmathify(0.001), E=mpmathify(10**10), Fweight=mpmathify(1), y0 = mpmathify(0.00005), theta0=mpmathify(0.001), tol=0.000001, use89=True)
+bend_theta_y(s_eval, h, thickness=mpmathify(0.001), E=mpmathify(10**10), Fweight=mpmathify(1), y0 = mpmathify(0.006), theta0=mpmathify(0.1), tol=0.000001, use89=True)
