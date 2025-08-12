@@ -394,7 +394,7 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
     mat[1][0] = F[-1][1]/mpmathify("1E" +  str(min_exponent))
     print(mato)
     print(mat)
-    return mat, mato,
+
     print(mat, "mat newcoords", "DET:", mp.det(mat))
     input("waiting for UI!")
     print()
@@ -408,7 +408,7 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
         tt = 0.1
     if yt/ L > 0.1:
         yt = 0.1*L
-    res = ((mp.matrix(mat))**-1) * mp.matrix([[yt],[tt]])
+    res = ((mp.matrix(mat))**-1) * (mp.matrix([-1, L],[atransform, -1])) * mp.matrix([[yt],[tt]])
     print(res, "res")
     #f0 = mp.matrix([res[1], mpmathify(0), res[0], mpmathify(0)])
     #S, F, Es = bend(
@@ -429,13 +429,14 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
     M0ss =[]
     Ess = []
 
-    for i in range(10):
-        for j in range(10):
-            Fs_sol, M0_sol = Fs_guess + (i-5) * Fs_guess / 1, M0_guess + (j-5) * M0_guess / 1
-            f0 = mp.matrix([M0_sol, mpmathify(0), Fs_sol, mpmathify(0)])
-            S, F, Es = bend(f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0])
-            theta_end = F[-1][1]
-            y_end = F[-1][3]
+    for i in range(5):
+        for j in range(5):
+            Fs_sol, M0_sol = Fs_guess + (i-2) * Fs_guess * 2, M0_guess + (j-2) * M0_guess * 2
+            f0 = mp.matrix([M0_sol, mpmathify(0), mpmathify(0), Fs_sol])
+            S, F, Es = bend(f0, s0, grid[len(grid) - 1], df_ds_tran, tol, grid[1] - grid[0])
+            end_par = (mp.matrix([-1, L],[atransform, -1]))**-1  * mp.matrix([F[-1][2], F[-1][1]])
+            theta_end = end_par[1]
+            y_end = end_par[0]
             res = ((y_end - y0)/grid[len(grid) - 1])**2 + (theta_end - theta0)**2
             
             Fss.append(Fs_sol)
@@ -676,3 +677,16 @@ def bend_samples(
 #    return wh * hsc(s)
 #s_eval = mp.matrix(np.linspace(0,L,int(200),endpoint = True))
 #bend_theta_y(s_eval, h, thickness=mpmathify(0.001), E=mpmathify(10**10), Fweight=mpmathify(0.1), y0 = mpmathify(0.006), theta0=mpmathify(0.1), tol=0.0001, use89=True)
+
+#Numerical experiment to see if resolving a nonzero determinant was good enough to resolve a usable loss 
+#landscape
+print("Main!")
+L = 0.1
+wh = 0.001
+def hsc(s):
+    return 0.01 # + (s - L/2)**2 * 4
+
+def h(s):
+    return wh * hsc(s)
+s_eval = mp.matrix(np.linspace(0,L,int(200),endpoint = True))
+ret = bend_theta_y(s_eval, h, thickness=mpmathify(0.001), E=mpmathify(10**10), Fweight=mpmathify(0.1), y0 = mpmathify(0.006), theta0=mpmathify(0.1), tol=0.000001, use89=True)
