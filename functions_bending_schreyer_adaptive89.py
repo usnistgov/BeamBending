@@ -144,7 +144,12 @@ def mp_RKF89_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
         return mp.fdiv(a,b)
 
     ds = ds_max
+    print("LOOP 89")
+    count = 0
     while s < s_final - ds_max:
+        count +=1
+        if count % 1000 == 0:
+            print(count, s)
         if s_final - s < ds:
             ds = s_final - s
         #print(ds, f)
@@ -183,7 +188,7 @@ def mp_RKF89_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
         err = max(ov(mp.fabs,(ov(fdiv2,truncation_error,ov(mp.fabs,f), delta))))
         if err   > step_tol and err != mpmathify(0.0):
             ds = 0.9 * ds * (step_tol/err )**(1/9) 
-            print("shrink", err, ds/ s_final)
+            #print("shrink", err, ds/ s_final)
             continue
             
         f = f + delta
@@ -196,7 +201,7 @@ def mp_RKF89_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
         es.append(truncation_error)
         ss.append(s)
         fs.append(f)
-
+    print("DONE 89")
     return ss, fs, es
 
 
@@ -325,22 +330,76 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
     s0 = grid[0]
 
     #Set the initial moment, or sideforce to a very small number, then the system is approximately linear and we can directly scale the initial condition to reach the desired bending angle.
-    mat = [[0,0],[0,0]]
+    mato = [[0,0],[0,0]]
     #Matrix entries for small initial moment
     f0 = mp.matrix([mpmathify("1E" +  str(min_exponent)), mpmathify(0), mpmathify(0), mpmathify(0)])
     S, F, Es = bend(
         f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
     )
-    mat[0][1] = F[-1][3]/mpmathify("1E" +  str(min_exponent))
-    mat[1][1] = F[-1][1]/mpmathify("1E" +  str(min_exponent))
+    mato[0][1] = F[-1][3]/mpmathify("1E" +  str(min_exponent))
+    mato[1][1] = F[-1][1]/mpmathify("1E" +  str(min_exponent))
     #Matrix entries for small side force
     f0 = mp.matrix([mpmathify(0), mpmathify(0),mpmathify("1E" + str(min_exponent)), mpmathify(0)])
     S, F, Es = bend(
         f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
     )
-    mat[0][0] = F[-1][3]/mpmathify("1E" +  str(min_exponent))
+    mato[0][0] = F[-1][3]/mpmathify("1E" +  str(min_exponent))
+    mato[1][0] = F[-1][1]/mpmathify("1E" +  str(min_exponent))
+    print(mato)
+    print("mat", mato[1][0]/mato[0][0], mato[1][1]/mato[0][1], "DET:",mp.det(mato))
+    M = mato
+    print(M[0][0] * M[1][1] - M[1][0] * M[0][1])
+
+    #perform a transform that seperates the scales of response so that the matrix isnt singular
+    atransform = mato[1][0]/mato[0][0]
+    L = grid[len(grid) - 1]
+    #define the system in this transform
+
+    def thetat(A,B):
+        return (A + atransform * B)/(atransform * L - 1)
+
+    def dA_ds(A,B,M,s):
+        return atransform * mp.sin(thetat(A,B)) - M / E / I_spline(s)
+    
+    def dB_ds(A,B,M,s):
+        return -1 * mp.sin(thetat(A,B)) + L * M/E / I_spline(s)
+    
+    def dM_ds_tran(A,B, Fs):
+        return Fweight * mp.sin(thetat(A,B)) + Fs * mp.cos(thetat(A,B))
+    
+    def df_ds_tran(s, f):
+        #[dM, dA, dB, dFs]
+        return mp.matrix([dM_ds_tran(f[1], f[2], f[3]), dA_ds(f[1],f[2],f[0],s), dB_ds(f[1],f[2],f[0],s), mpmathify(0)])
+
+    f0 = None
+    # Anytime the cosine term is not negligible (a side force is present)
+
+    s0 = grid[0]
+
+    #Set the initial moment, or sideforce to a very small number, then the system is approximately linear and we can directly scale the initial condition to reach the desired bending angle.
+    mat = [[0,0],[0,0]]
+    #Matrix entries for small initial moment
+    f0 = mp.matrix([mpmathify("1E" +  str(min_exponent)), mpmathify(0), mpmathify(0), mpmathify(0)])
+    S, F, Es = bend(
+        f0, s0, grid[len(grid) - 1], df_ds_tran, tol, grid[1] - grid[0]
+    )
+    mat[0][1] = F[-1][2]/mpmathify("1E" +  str(min_exponent))
+    mat[1][1] = F[-1][1]/mpmathify("1E" +  str(min_exponent))
+    #Matrix entries for small side force
+    f0 = mp.matrix([mpmathify(0), mpmathify(0), mpmathify(0), mpmathify("1E" + str(min_exponent))])
+    S, F, Es = bend(
+        f0, s0, grid[len(grid) - 1], df_ds_tran, tol, grid[1] - grid[0]
+    )
+    mat[0][0] = F[-1][2]/mpmathify("1E" +  str(min_exponent))
     mat[1][0] = F[-1][1]/mpmathify("1E" +  str(min_exponent))
-    print("mat", mat[1][0]/mat[0][0], mat[1][1]/mat[0][1])
+    print(mato)
+    print(mat)
+    return mat, mato,
+    print(mat, "mat newcoords", "DET:", mp.det(mat))
+    input("waiting for UI!")
+    print()
+    #The AB coordinates response matrix
+
     for r in mat:
         print(r)
     tt = theta0
@@ -512,7 +571,7 @@ def bend_samples(
         #print(IS(x))
         return (IS(x)*2)**3 * T /12
 
-    # Is the sine term present?
+    # Is the sine term present? 
     Fs = not (Fsin == mpmathify(0))
     # Is the bending angle small enough to use linear approximation?
 
@@ -607,13 +666,13 @@ def bend_samples(
     # Cosine only, shoots the F2 term which is the force coefficient on the cosine force, also for the general case or both terms significant
     
 
-print("Main!")
-L = 0.1
-wh = 0.001
-def hsc(s):
-    return 1.01 # + (s - L/2)**2 * 4
-
-def h(s):
-    return wh * hsc(s)
-s_eval = mp.matrix(np.linspace(0,L,int(200),endpoint = True))
-bend_theta_y(s_eval, h, thickness=mpmathify(0.001), E=mpmathify(10**10), Fweight=mpmathify(1), y0 = mpmathify(0.006), theta0=mpmathify(0.1), tol=0.000001, use89=True)
+#print("Main!")
+#L = 0.1
+#wh = 0.001
+#def hsc(s):
+##    return 0.01 # + (s - L/2)**2 * 4
+#
+#def h(s):
+#    return wh * hsc(s)
+#s_eval = mp.matrix(np.linspace(0,L,int(200),endpoint = True))
+#bend_theta_y(s_eval, h, thickness=mpmathify(0.001), E=mpmathify(10**10), Fweight=mpmathify(0.1), y0 = mpmathify(0.006), theta0=mpmathify(0.1), tol=0.0001, use89=True)
