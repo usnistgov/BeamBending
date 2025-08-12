@@ -396,7 +396,7 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
     print(mat)
 
     print(mat, "mat newcoords", "DET:", mp.det(mat))
-    input("waiting for UI!")
+
     print()
     #The AB coordinates response matrix
 
@@ -408,7 +408,7 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
         tt = 0.1
     if yt/ L > 0.1:
         yt = 0.1*L
-    res = ((mp.matrix(mat))**-1) * (mp.matrix([-1, L],[atransform, -1])) * mp.matrix([[yt],[tt]])
+    res = ((mp.matrix(mat))**-1) * (mp.matrix([[-1, L],[atransform, -1]])) * mp.matrix([[yt],[tt]])
     print(res, "res")
     #f0 = mp.matrix([res[1], mpmathify(0), res[0], mpmathify(0)])
     #S, F, Es = bend(
