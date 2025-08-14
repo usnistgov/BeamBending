@@ -434,7 +434,7 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
             Fs_sol, M0_sol = Fs_guess + (i-2) * Fs_guess * 2, M0_guess + (j-2) * M0_guess * 2
             f0 = mp.matrix([M0_sol, mpmathify(0), mpmathify(0), Fs_sol])
             S, F, Es = bend(f0, s0, grid[len(grid) - 1], df_ds_tran, tol, grid[1] - grid[0])
-            end_par = (mp.matrix([-1, L],[atransform, -1]))**-1  * mp.matrix([F[-1][2], F[-1][1]])
+            end_par = (mp.matrix([[-1, L],[atransform, -1]]))**-1  * mp.matrix([F[-1][2], F[-1][1]])
             theta_end = end_par[1]
             y_end = end_par[0]
             res = ((y_end - y0)/grid[len(grid) - 1])**2 + (theta_end - theta0)**2
