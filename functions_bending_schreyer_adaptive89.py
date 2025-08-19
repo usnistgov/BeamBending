@@ -474,6 +474,7 @@ def bend_theta_with_m0(grid, hspline, thickness = 1, E=1, Fweight = mpmathify(1)
     print(f0, "IC!")
     return S, F, Es
 
+<<<<<<< HEAD
 def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, theta0=1, tol=0.001, use89=False):
     #Estimate m0,Fs to acheive both y and heta0 on their own. This can help find bounds for the 2d optimization problem.
 
@@ -674,6 +675,8 @@ def bend_theta_y(grid, hspline, thickness=1, E=1, Fweight=mpmathify(1), y0 = 1, 
     print(f"End theta = {F[-1][1]}, End y = {F[-1][3]}")
 
     return S, F, Es
+=======
+>>>>>>> dedc4e5bf607bd3468a2c6c7c7cf6219a0d18960
 
 
 def bend_theta_with_Fside(
@@ -850,6 +853,7 @@ def bend_samples(
         return S, F, Es
     # Cosine only, shoots the F2 term which is the force coefficient on the cosine force, also for the general case or both terms significant
     
+<<<<<<< HEAD
 
 #print("Main!")
 #L = 0.1
@@ -981,3 +985,5 @@ def compare_coordinates_schemes(grid, hspline, thickness=1, E=1, Fweight=mpmathi
     gp=[mp.matrix([[-1, L],[atransform, -1]])**-1 * mp.matrix([[F[i][2]],[F[i][1]]]) for i in range(len(F))]
 
     return Sn, S, g, gp
+=======
+>>>>>>> dedc4e5bf607bd3468a2c6c7c7cf6219a0d18960
