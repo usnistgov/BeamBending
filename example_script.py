@@ -11,17 +11,17 @@ from functions_bending_schreyer_adaptive89 import  bend_theta_with_m0, integrate
 L = 0.05               # Length (m)
 T = 20e-6              # Thickness (m)
 w0 = 0.5e-3            # Mean half-width (m)
-amp = 0.3e-3           # Amplitude of half width sinusoid (m)
+amp = 3     # Amplitude of half width sinusoid (m)
 E = 200e9              # Young's modulus (Pa)
 mass = 0.3             # Mass (kg)
 gravity = 9.81         # Gravity (m/s^2)
-theta0 = np.pi / 4     # Target bend angle (rad)
-tol = 1e-5             # Adaptive RK tolerance
+theta0 = 0.57 # Target bend angle (rad)
+tol = 1e-4         # Adaptive RK tolerance
 n_points = 200         # Sampling resolution
 
 # ---- Geometry spline: constant + sinusoidal half-width ----
 s_profile = np.linspace(0, L, 200)
-w_profile = (w0 + amp * np.sin(1 * np.pi * s_profile / L))*10**-1.5
+w_profile = np.exp(-4 * amp * (np.sin(1 * np.pi * s_profile / L)))  # *10**-1.3
 # ---- Make a spline to feed the solver from the samples
 hspline = make_interp_spline(s_profile, w_profile, bc_type="natural")
 
@@ -35,7 +35,7 @@ S, F, Es = bend_theta_with_m0(
     hspline=hspline,
     E=E,
     Fweight=mp.mpf(Fw),
-    Fside = 0,                # Use sideforce shooting mode
+    Fside = 0,             
     theta0=theta0,
     tol=mp.mpf(tol),
     thickness= mp.mpf(T)
@@ -43,6 +43,8 @@ S, F, Es = bend_theta_with_m0(
 
 # ---- Extract results ----
 theta = [-1 * float(f[1]) for f in F]
+print("Initial and final angles (theta[0]), (theta[-1]):", theta[0], theta[-1])
+print("initial and final moments (M(0), M(L)):", F[0][0], F[-1][0])
 Ms = np.array([float(f[0]) for f in F])
 ws = np.array([float(hspline(float(s))) for s in S])
 Is = (1 / 12) * (2 * ws) ** 3 * T

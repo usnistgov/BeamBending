@@ -94,9 +94,10 @@ def mp_RKF45_adaptive(f0, s0, s_final, dfds, step_tol, ds_max):
         if err   > step_tol and err != mpmathify(0.0):
 
             ds = 0.9 * ds * (step_tol/err )**(1/5) 
-            print("shrink", err, ds/ s_final)
-            continue
             
+            continue
+        if int(round(float(s/s_final)*100,2)) % 10 == 0:
+            print(round(float(s/s_final)*100), "% done")
         f = f + delta
         s +=  ds
 #Calculate ds based on the maxmimum relative error in the vector truncation_error/f
@@ -466,7 +467,7 @@ def bend_theta_with_m0(grid, hspline, thickness = 1, E=1, Fweight = mpmathify(1)
         )
         return F[-1][1] - theta0
     print(f0[0], "IC, M(0)")
-    f0[0] = mp.findroot(shot_function, (f0[0]/64, f0[0] * mpmathify(64)), solver="anderson", tol=tol, verbose=True, verify=False)
+    f0[0] = mp.findroot(shot_function, (f0[0]/32, f0[0] * mpmathify(32)), solver="anderson", tol=mp.fabs(f0[0])/1000, verbose=True, verify=False)
 
     S, F, Es = bend(
         f0, s0, grid[len(grid) - 1], df_ds, tol, grid[1] - grid[0]
