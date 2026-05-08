@@ -11,7 +11,7 @@ from functions_bending_schreyer_adaptive89 import  bend_theta_with_m0, integrate
 L = 0.05               # Length (m)
 T = 20e-6              # Thickness (m)
 w0 = 0.5e-3            # Mean half-width (m)
-amp = 3     # Amplitude of half width sinusoid (m)
+amp = 3.1     # Amplitude of half width sinusoid (m)
 E = 200e9              # Young's modulus (Pa)
 mass = 0.3             # Mass (kg)
 gravity = 9.81         # Gravity (m/s^2)
