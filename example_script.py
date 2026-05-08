@@ -15,7 +15,7 @@ amp = 3.1     # Amplitude of half width sinusoid (m)
 E = 200e9              # Young's modulus (Pa)
 mass = 0.3             # Mass (kg)
 gravity = 9.81         # Gravity (m/s^2)
-theta0 = 0.57 # Target bend angle (rad)
+theta0 = 0.5 # Target bend angle (rad)
 tol = 1e-4         # Adaptive RK tolerance
 n_points = 200         # Sampling resolution
 
