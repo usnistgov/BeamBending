@@ -21,7 +21,7 @@ n_points = 200         # Sampling resolution
 
 # ---- Geometry spline: constant + sinusoidal half-width ----
 s_profile = np.linspace(0, L, 200)
-w_profile = np.exp(-4 * amp * (np.sin(1 * np.pi * s_profile / L)))  # *10**-1.3
+w_profile = np.minimum(np.exp(-4 * amp * (np.sin(1 * np.pi * s_profile / L))),0.01)  # *10**-1.3
 # ---- Make a spline to feed the solver from the samples
 hspline = make_interp_spline(s_profile, w_profile, bc_type="natural")
 
